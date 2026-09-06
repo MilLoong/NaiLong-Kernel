@@ -1,0 +1,27 @@
+/**
+ * @copyright Copyright The NaiLong-Kernel Contributors
+ */
+
+#ifndef NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CSTRING_
+#define NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CSTRING_
+
+#include "string.h"
+
+namespace nk_std {
+
+using ::memcmp;
+using ::memcpy;
+using ::memmove;
+using ::memset;
+using ::strcat;
+using ::strchr;
+using ::strcmp;
+using ::strcpy;
+using ::strlen;
+using ::strncmp;
+using ::strncpy;
+using ::strnlen;
+
+}  // namespace nk_std
+
+#endif /* NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CSTRING_ */

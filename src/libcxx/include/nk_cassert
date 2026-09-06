@@ -1,0 +1,10 @@
+/**
+ * @copyright Copyright The NaiLong-Kernel Contributors
+ */
+
+#ifndef NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CASSERT_
+#define NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CASSERT_
+
+#include "nk_assert.h"
+
+#endif /* NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CASSERT_ */

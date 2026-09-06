@@ -1,0 +1,10 @@
+/**
+ * @copyright Copyright The NaiLong-Kernel Contributors
+ */
+
+#ifndef NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CSTDIO_
+#define NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CSTDIO_
+
+#include "nk_stdio.h"
+
+#endif /* NAILONG_KERNEL_SRC_LIBCXX_INCLUDE_NK_CSTDIO_ */

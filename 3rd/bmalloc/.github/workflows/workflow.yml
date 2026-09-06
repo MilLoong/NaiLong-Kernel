@@ -1,0 +1,35 @@
+# Copyright The bmalloc Contributors
+
+name: build
+
+on:
+  - push
+  - pull_request
+  - release
+
+env:
+  CMAKE_BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules : true
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install --fix-missing -y gcc g++ libgtest-dev
+
+      - name: Run bmalloc tests
+        run: |
+          cmake --preset build
+          cmake --build build --target bmalloc_test
+          ./build/bin/bmalloc_test

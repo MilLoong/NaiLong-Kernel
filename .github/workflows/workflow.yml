@@ -1,0 +1,73 @@
+# Copyright The NaiLong-Kernel Contributors
+
+name: build
+
+on:
+  - push
+  - pull_request
+  - release
+
+env:
+  CMAKE_BUILD_TYPE: Release
+  DOCKER_IMAGE: nailong-kernel-dev:latest
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+      statuses: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.DOCKER_IMAGE }} --target nailong_kernel ./tools
+
+      - name: x86_64
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ env.DOCKER_IMAGE }}
+          options: -v ${{ github.workspace }}:/root -e CMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }}
+          run: |
+            cmake --preset=build_x86_64
+            cmake --build build_x86_64 --target NaiLong-Kernel unit-test coverage doc
+
+      - name: riscv64
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ env.DOCKER_IMAGE }}
+          options: -v ${{ github.workspace }}:/root -e CMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }}
+          run: |
+            cmake --preset=build_riscv64
+            cmake --build build_riscv64 --target NaiLong-Kernel
+
+      - name: aarch64
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ env.DOCKER_IMAGE }}
+          options: -v ${{ github.workspace }}:/root -e CMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }}
+          run: |
+            cmake --preset=build_aarch64
+            cmake --build build_aarch64 --target NaiLong-Kernel
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ${{ github.workspace }}/build_x86_64/coverage/coverage.info
+          verbose: true
+
+      - name: Publish
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ github.workspace }}/doc/html
+
+      # - name: Super-Linter
+      #   uses: super-linter/super-linter@v7.2.0
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

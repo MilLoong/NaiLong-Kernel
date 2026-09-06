@@ -1,0 +1,26 @@
+# Copyright The NaiLong-Kernel Contributors
+# Git ignore rules
+
+.DS_Store
+build_aarch64
+build_riscv64
+build_x86_64
+doc/html
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea
+Doxyfile
+*.o
+*.objdump
+*.elf
+.pre-commit-config.yaml
+
+# 本地调试 / 验证日志
+nk_*.log
+sk_*.log
+
+# Broken as gitlinks after local .git wipe; re-add on Linux or as submodules later
+/3rd/u-boot/
+/3rd/optee/
+/3rd/arm-trusted-firmware/
