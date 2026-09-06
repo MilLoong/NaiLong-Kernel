@@ -181,7 +181,4 @@ TARGET_LINK_LIBRARIES (
               gcc
               $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:
               opensbi_interface
-              >
-              $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},aarch64>:
-              teec
               >)
