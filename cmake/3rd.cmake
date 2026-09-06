@@ -106,90 +106,101 @@ IF(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "riscv64")
 ENDIF()
 
 # https://github.com/u-boot/u-boot.git
+# 目录缺失时跳过（例如尚未 checkout 子模块时仍可只编内核）
 SET (u-boot_SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/u-boot)
 SET (u-boot_BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/u-boot)
-ADD_CUSTOM_TARGET (
-    u-boot
-    COMMENT "build u-boot..."
-    # make 时编译
-    ALL
-    DEPENDS $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:opensbi>
-    WORKING_DIRECTORY ${u-boot_SOURCE_DIR}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${u-boot_BINARY_DIR}
-    COMMAND
-        make O=${u-boot_BINARY_DIR}
-        $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},aarch64>:qemu_arm64_defconfig>
-        $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:qemu-riscv64_spl_defconfig>
-        $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},x86_64>:qemu-x86_64_defconfig>
-        -j${CMAKE_BUILD_PARALLEL_LEVEL}
-    COMMAND
-        make CROSS_COMPILE=${TOOLCHAIN_PREFIX} O=${u-boot_BINARY_DIR}
-        $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:OPENSBI=${opensbi_BINARY_DIR}/platform/generic/firmware/fw_dynamic.bin>
-        -j${CMAKE_BUILD_PARALLEL_LEVEL})
-SET_DIRECTORY_PROPERTIES (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
-                                     ${u-boot_BINARY_DIR})
+IF (EXISTS ${u-boot_SOURCE_DIR}/Makefile)
+    ADD_CUSTOM_TARGET (
+        u-boot
+        COMMENT "build u-boot..."
+        # make 时编译
+        ALL
+        DEPENDS $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:opensbi>
+        WORKING_DIRECTORY ${u-boot_SOURCE_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${u-boot_BINARY_DIR}
+        COMMAND
+            make O=${u-boot_BINARY_DIR}
+            $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},aarch64>:qemu_arm64_defconfig>
+            $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:qemu-riscv64_spl_defconfig>
+            $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},x86_64>:qemu-x86_64_defconfig>
+            -j${CMAKE_BUILD_PARALLEL_LEVEL}
+        COMMAND
+            make CROSS_COMPILE=${TOOLCHAIN_PREFIX} O=${u-boot_BINARY_DIR}
+            $<$<STREQUAL:${CMAKE_SYSTEM_PROCESSOR},riscv64>:OPENSBI=${opensbi_BINARY_DIR}/platform/generic/firmware/fw_dynamic.bin>
+            -j${CMAKE_BUILD_PARALLEL_LEVEL})
+    SET_DIRECTORY_PROPERTIES (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
+                                         ${u-boot_BINARY_DIR})
+ENDIF ()
 
-IF(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+IF (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
     # https://github.com/OP-TEE/optee_os.git
     SET (optee_os_SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/optee/optee_os)
     SET (optee_os_BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/optee/optee_os)
-    ADD_CUSTOM_TARGET (
-        optee_os
-        COMMENT "build optee_os..."
-        # make 时编译
-        ALL
-        WORKING_DIRECTORY ${optee_os_SOURCE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${optee_os_BINARY_DIR}
-        COMMAND
-            make CFG_ARM64_core=y CFG_TEE_BENCHMARK=n CFG_TEE_CORE_LOG_LEVEL=3
-            CROSS_COMPILE=${TOOLCHAIN_PREFIX}
-            CROSS_COMPILE_core=${TOOLCHAIN_PREFIX}
-            CROSS_COMPILE_ta_arm32=${TOOLCHAIN_PREFIX32}
-            CROSS_COMPILE_ta_arm64=${TOOLCHAIN_PREFIX} DEBUG=$<CONFIG:Debug>
-            O=${optee_os_BINARY_DIR} PLATFORM=vexpress-qemu_armv8a
-            CFG_ARM_GICV3=y -j${CMAKE_BUILD_PARALLEL_LEVEL})
-    SET_DIRECTORY_PROPERTIES (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
-                                         ${optee_os_BINARY_DIR})
+    IF (EXISTS ${optee_os_SOURCE_DIR}/Makefile)
+        ADD_CUSTOM_TARGET (
+            optee_os
+            COMMENT "build optee_os..."
+            # make 时编译
+            ALL
+            WORKING_DIRECTORY ${optee_os_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${optee_os_BINARY_DIR}
+            COMMAND
+                make CFG_ARM64_core=y CFG_TEE_BENCHMARK=n CFG_TEE_CORE_LOG_LEVEL=3
+                CROSS_COMPILE=${TOOLCHAIN_PREFIX}
+                CROSS_COMPILE_core=${TOOLCHAIN_PREFIX}
+                CROSS_COMPILE_ta_arm32=${TOOLCHAIN_PREFIX32}
+                CROSS_COMPILE_ta_arm64=${TOOLCHAIN_PREFIX} DEBUG=$<CONFIG:Debug>
+                O=${optee_os_BINARY_DIR} PLATFORM=vexpress-qemu_armv8a
+                CFG_ARM_GICV3=y -j${CMAKE_BUILD_PARALLEL_LEVEL})
+        SET_DIRECTORY_PROPERTIES (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
+                                             ${optee_os_BINARY_DIR})
+    ENDIF ()
 
     # https://github.com/OP-TEE/optee_client.git
-    ADD_SUBDIRECTORY (${CMAKE_SOURCE_DIR}/3rd/optee/optee_client)
+    IF (EXISTS ${CMAKE_SOURCE_DIR}/3rd/optee/optee_client/CMakeLists.txt)
+        ADD_SUBDIRECTORY (${CMAKE_SOURCE_DIR}/3rd/optee/optee_client)
+    ENDIF ()
 
     # https://github.com/ARM-software/arm-trusted-firmware
-    # 编译 atf
+    # 编译 atf（依赖本地 optee_os / u-boot）
     SET (arm-trusted-firmware_SOURCE_DIR
          ${CMAKE_SOURCE_DIR}/3rd/arm-trusted-firmware)
     SET (arm-trusted-firmware_BINARY_DIR
          ${CMAKE_BINARY_DIR}/3rd/arm-trusted-firmware)
-    ADD_CUSTOM_TARGET (
-        arm-trusted-firmware
-        COMMENT "build arm-trusted-firmware..."
-        # make 时编译
-        ALL
-        DEPENDS optee_os u-boot
-        WORKING_DIRECTORY ${arm-trusted-firmware_SOURCE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-                ${arm-trusted-firmware_BINARY_DIR}
-        COMMAND
-            make DEBUG=$<CONFIG:Debug> CROSS_COMPILE=${TOOLCHAIN_PREFIX}
-            PLAT=qemu BUILD_BASE=${arm-trusted-firmware_BINARY_DIR}
-            BL32=${optee_os_BINARY_DIR}/core/tee-header_v2.bin
-            BL32_EXTRA1=${optee_os_BINARY_DIR}/core/tee-pager_v2.bin
-            BL32_EXTRA2=${optee_os_BINARY_DIR}/core/tee-pageable_v2.bin
-            BL33=${u-boot_BINARY_DIR}/u-boot.bin BL32_RAM_LOCATION=tdram
-            QEMU_USE_GIC_DRIVER=QEMU_GICV3 SPD=opteed all fip
-            -j${CMAKE_BUILD_PARALLEL_LEVEL}
-        COMMAND
-            dd
-            if=${arm-trusted-firmware_BINARY_DIR}/qemu/$<IF:$<CONFIG:Debug>,debug,release>/bl1.bin
-            of=${arm-trusted-firmware_BINARY_DIR}/flash.bin bs=4096 conv=notrunc
-        COMMAND
-            dd
-            if=${arm-trusted-firmware_BINARY_DIR}/qemu/$<IF:$<CONFIG:Debug>,debug,release>/fip.bin
-            of=${arm-trusted-firmware_BINARY_DIR}/flash.bin seek=64 bs=4096
-            conv=notrunc)
-    SET_DIRECTORY_PROPERTIES (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
-                                         ${arm-trusted-firmware_BINARY_DIR})
-ENDIF()
+    IF (EXISTS ${arm-trusted-firmware_SOURCE_DIR}/Makefile
+        AND TARGET optee_os
+        AND TARGET u-boot)
+        ADD_CUSTOM_TARGET (
+            arm-trusted-firmware
+            COMMENT "build arm-trusted-firmware..."
+            # make 时编译
+            ALL
+            DEPENDS optee_os u-boot
+            WORKING_DIRECTORY ${arm-trusted-firmware_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                    ${arm-trusted-firmware_BINARY_DIR}
+            COMMAND
+                make DEBUG=$<CONFIG:Debug> CROSS_COMPILE=${TOOLCHAIN_PREFIX}
+                PLAT=qemu BUILD_BASE=${arm-trusted-firmware_BINARY_DIR}
+                BL32=${optee_os_BINARY_DIR}/core/tee-header_v2.bin
+                BL32_EXTRA1=${optee_os_BINARY_DIR}/core/tee-pager_v2.bin
+                BL32_EXTRA2=${optee_os_BINARY_DIR}/core/tee-pageable_v2.bin
+                BL33=${u-boot_BINARY_DIR}/u-boot.bin BL32_RAM_LOCATION=tdram
+                QEMU_USE_GIC_DRIVER=QEMU_GICV3 SPD=opteed all fip
+                -j${CMAKE_BUILD_PARALLEL_LEVEL}
+            COMMAND
+                dd
+                if=${arm-trusted-firmware_BINARY_DIR}/qemu/$<IF:$<CONFIG:Debug>,debug,release>/bl1.bin
+                of=${arm-trusted-firmware_BINARY_DIR}/flash.bin bs=4096 conv=notrunc
+            COMMAND
+                dd
+                if=${arm-trusted-firmware_BINARY_DIR}/qemu/$<IF:$<CONFIG:Debug>,debug,release>/fip.bin
+                of=${arm-trusted-firmware_BINARY_DIR}/flash.bin seek=64 bs=4096
+                conv=notrunc)
+        SET_DIRECTORY_PROPERTIES (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
+                                             ${arm-trusted-firmware_BINARY_DIR})
+    ENDIF ()
+ENDIF ()
 
 # https://git.kernel.org/pub/scm/utils/dtc/dtc.git
 SET (dtc_SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/dtc)
